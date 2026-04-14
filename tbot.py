@@ -211,12 +211,24 @@ def main_menu():
     
 async def check_joined(user_id):
     try:
+        # এখানে অবশ্যই গ্রুপের Numeric ID (যেমন: -100...) অথবা সঠিক ইউজারনেম ব্যবহার করবেন
         member = await bot.get_chat_member(chat_id=CHANNEL_ID, user_id=user_id)
-        if member.status in ['member', 'administrator', 'creator']:
+        
+        # ইউজারের বর্তমান স্ট্যাটাস কি সেটা দেখার জন্য (রেন্ডার লগে পাবেন)
+        print(f"User {user_id} Status: {member.status}")
+        
+        # লজিক: যদি ইউজার 'left' (জয়েন করেনি) অথবা 'kicked' (ব্যানড) না হয়, 
+        # তবেই সে আমাদের জন্য বৈধ মেম্বার (সে অ্যাডমিন হোক বা সাধারণ মেম্বার)
+        if member.status not in ['left', 'kicked']:
             return True
+        else:
+            return False
+            
+    except Exception as e:
+        # যদি কোনো কারণে চেক করতে না পারে (যেমন বট অ্যাডমিন না হলে)
+        print(f"Error checking join status: {e}")
         return False
-    except Exception:
-        return False
+        
 import random
 
 def generate_ig_username():
