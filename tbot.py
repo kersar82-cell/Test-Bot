@@ -2189,10 +2189,15 @@ async def list_all_users(message: types.Message):
     # ==========================================
 # '✅ জয়েন করেছি' বাটনের হ্যান্ডলার (নিরাপদ ভার্সন)
 # ==========================================
+# ==========================================
+# '✅ জয়েন করেছি' বাটনের হ্যান্ডলার (সংশোধিত)
+# ==========================================
 @dp.callback_query_handler(text="check_join", state="*")
 async def process_check_join(callback_query: types.CallbackQuery, state: FSMContext):
     try:
+        # সঠিক ইউজারের আইডি এবং ইউজারনেম নেওয়া হলো
         user_id = callback_query.from_user.id
+        username = f"@{callback_query.from_user.username}" if callback_query.from_user.username else "No_Username"
         
         # আবার চেক করা হচ্ছে ইউজার গ্রুপে জয়েন করেছে কি না
         is_member = await check_joined(user_id)
@@ -2200,15 +2205,40 @@ async def process_check_join(callback_query: types.CallbackQuery, state: FSMCont
         if is_member:
             # সুন্দর সাকসেস মেসেজ (অ্যালার্ট হিসেবে দেখাবে)
             await callback_query.answer(
-                "✨ অভিনন্দন! আপনি সফলভাবে আমাদের গ্রুপে যোগ দিয়েছেন। এখন আপনি বটটি ব্যবহার করতে পারবেন।", 
+                "✨ অভিনন্দন! আপনি সফলভাবে আমাদের গ্রুপে যোগ দিয়েছেন।", 
                 show_alert=True
             )
             
             # আগের "জয়েন করুন" মেসেজটি মুছে ফেলা হবে
             await callback_query.message.delete()
             
-            # ইউজারকে মেইন মেনুতে নিয়ে যাওয়ার জন্য স্টার্ট ফাংশনটি কল করা
-            await start(callback_query.message, state)
+            # --- ডাটাবেস রেজিস্ট্রেশন (যেহেতু start কমান্ডে এটি স্কিপ হয়েছিল) ---
+            cursor.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,))
+            existing_user = cursor.fetchone()
+
+            if not existing_user:
+                # নতুন ইউজার হিসেবে লোকাল ডাটাবেসে সেভ করা
+                sql = "INSERT INTO users (user_id, username, balance, referral_count, referred_by, refer_balance, withdraw_count) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                cursor.execute(sql, (user_id, username, 0.0, 0, 0, 0.0, 0))
+                db.commit()
+            else:
+                cursor.execute("UPDATE users SET username = ? WHERE user_id = ?", (username, user_id))
+                db.commit()
+                
+            # --- ওয়েলকাম মেসেজ ও মেইন মেনু পাঠানো ---
+            inline_kb = types.InlineKeyboardMarkup(row_width=2)
+            help_button = types.InlineKeyboardButton(text="🆘 Contact Support", url="t.me/INSTAFB_SUPPORT") 
+            inline_kb.add(help_button)
+
+            welcome_text = """📢 আজকের কাজের আপডেট এবং রেট লিস্ট 📢
+
+💸 Instagram 2FA: ৩ ৳🎉
+💸 Instagram Cookies: ৪.০০ ৳🎉
+💸 Instagram Mother: ৭.০০ ৳🎉
+💸 Facebook 00 Fnd 2FA: ৫.৮০ ৳🎉
+"""
+            await callback_query.message.answer(welcome_text, reply_markup=inline_kb, parse_mode="Markdown")
+            await callback_query.message.answer("❓কী করতে চান বেছে নিন ◀️", reply_markup=main_menu())
             
         else:
             # জয়েন না করলে লাল চিহ্নে সুন্দর সতর্কবার্তা
@@ -2218,8 +2248,9 @@ async def process_check_join(callback_query: types.CallbackQuery, state: FSMCont
             )
             
     except Exception as e:
-        # কোনো যান্ত্রিক ত্রুটি হলে বট বন্ধ হবে না, শুধু আপনাকে ছোট করে জানাবে
         await callback_query.answer(f"❌ একটি ত্রুটি হয়েছে: {str(e)}", show_alert=False)
+        print(f"Error in check_join: {e}")
+        
 import io
 
 # --- অ্যাডমিন কমান্ড: প্রোফাইল লিঙ্ক ও সব পেমেন্ট মেথডসহ রিপোর্ট ---
