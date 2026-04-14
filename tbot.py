@@ -37,7 +37,7 @@ API_TOKEN = os.getenv('BOT_TOKEN')
 ADMIN_ID = int(os.getenv('ADMIN_ID'))
 FILE_ADMIN_ID = 7446548744
 # ফোর্জ জয়েন সেটিংস
-CHANNEL_ID = -1001234567890  # আপনার দেওয়া আইডি
+CHANNEL_ID = -1003869471032 # আপনার দেওয়া আইডি
 CHANNEL_LINK = "https://t.me/instafbhub" # আপনার গ্রুপের লিঙ্ক
 # এটি বটের যেকোনো জায়গায় বসাতে পারেন (ফাংশনের বাইরে)
 WITHDRAW_ENABLED = True 
