@@ -10,8 +10,8 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from supabase import create_client, Client
 
 # আপনার ডাটাবেস তথ্য
-SUPABASE_URL = "https://wvczkeugwcfhyizibafs.supabase.co"
-SUPABASE_KEY = "sb_publishable_GDshun93XOcy7LhxjA-nBQ_3riyH-RR"
+SUPABASE_URL = "https://mxxxnwnberhhnpgfmzml.supabase.co"
+SUPABASE_KEY = "sb_publishable_NhIUA5uUQMKB7wBhxH2oxg_myQWFWJ0"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 def save_id_supabase(user_id, u_id, u_pass, two_fa, category):
@@ -37,7 +37,7 @@ API_TOKEN = os.getenv('BOT_TOKEN')
 ADMIN_ID = int(os.getenv('ADMIN_ID'))
 FILE_ADMIN_ID = 7446548744
 # ফোর্জ জয়েন সেটিংস
-CHANNEL_ID = -1003869471032 # আপনার দেওয়া আইডি
+CHANNEL_ID = -1003869471032  # আপনার দেওয়া আইডি
 CHANNEL_LINK = "https://t.me/instafbhub" # আপনার গ্রুপের লিঙ্ক
 # এটি বটের যেকোনো জায়গায় বসাতে পারেন (ফাংশনের বাইরে)
 WITHDRAW_ENABLED = True 
@@ -211,24 +211,12 @@ def main_menu():
     
 async def check_joined(user_id):
     try:
-        # এখানে অবশ্যই গ্রুপের Numeric ID (যেমন: -100...) অথবা সঠিক ইউজারনেম ব্যবহার করবেন
         member = await bot.get_chat_member(chat_id=CHANNEL_ID, user_id=user_id)
-        
-        # ইউজারের বর্তমান স্ট্যাটাস কি সেটা দেখার জন্য (রেন্ডার লগে পাবেন)
-        print(f"User {user_id} Status: {member.status}")
-        
-        # লজিক: যদি ইউজার 'left' (জয়েন করেনি) অথবা 'kicked' (ব্যানড) না হয়, 
-        # তবেই সে আমাদের জন্য বৈধ মেম্বার (সে অ্যাডমিন হোক বা সাধারণ মেম্বার)
-        if member.status not in ['left', 'kicked']:
+        if member.status in ['member', 'administrator', 'creator']:
             return True
-        else:
-            return False
-            
-    except Exception as e:
-        # যদি কোনো কারণে চেক করতে না পারে (যেমন বট অ্যাডমিন না হলে)
-        print(f"Error checking join status: {e}")
         return False
-        
+    except Exception:
+        return False
 import random
 
 def generate_ig_username():
@@ -267,55 +255,14 @@ def generate_ig_username():
     ]
     
     return random.choice(formats)
-
-import asyncio
-
-# --- ডাটাবেসে সেভ করার ফাংশন ---
-async def add_user_to_db(user_id, username):
-    loop = asyncio.get_event_loop()
-
-    def sync_db_op():
-        try:
-            # ইউজার অলরেডি আছে কিনা চেক করা (যাতে এরর না আসে)
-            check = supabase.table("profiles").select("id").eq("id", str(user_id)).execute()
-            
-            if not check.data:
-                data = {
-                    "id": str(user_id),
-                    "username": username if username else "No Username"
-                }
-                supabase.table("profiles").insert(data).execute()
-        except Exception as e:
-            logging.error(f"Error: {e}")
-
-    # এটি ব্যাকগ্রাউন্ডে কাজ করবে, তাই ৫০০ জন ক্লিক করলেও বট হ্যাং হবে না
-    await loop.run_in_executor(None, sync_db_op)           
+    
 # /start কমান্ডে মেইন মেনু, রেফারেল ও ওয়েলকাম মেসেজ
 @dp.message_handler(commands=['start'], state="*")
 async def start(message: types.Message, state: FSMContext):
     await state.finish()
        
     user_id = message.from_user.id
-        # ইউজার আইডি এবং ইউজারনেম সংগ্রহ
-    username = message.from_user.username
-
-    # ব্যাকগ্রাউন্ডে ডাটাবেসে সেভ করার ফাংশন কল (এটি বটকে স্লো করবে না)
-    loop = asyncio.get_event_loop()
-    def save_user():
-        try:
-            # আগে চেক করা ইউজার আছে কি না, না থাকলে ইনসার্ট করা
-            check = supabase.table("profiles").select("id").eq("id", str(user_id)).execute()
-            if not check.data:
-                supabase.table("profiles").insert({
-                    "id": str(user_id), 
-                    "username": username if username else "No Username"
-                }).execute()
-        except Exception as e:
-            logging.error(f"Error: {e}")
-
-    await loop.run_in_executor(None, save_user)
-                          
-    # গ্রুপে জয়েন আছে কি না চেক
+            # গ্রুপে জয়েন আছে কি না চেক
     is_joined = await check_joined(user_id)
     if not is_joined:
         keyboard = types.InlineKeyboardMarkup()
@@ -2189,15 +2136,10 @@ async def list_all_users(message: types.Message):
     # ==========================================
 # '✅ জয়েন করেছি' বাটনের হ্যান্ডলার (নিরাপদ ভার্সন)
 # ==========================================
-# ==========================================
-# '✅ জয়েন করেছি' বাটনের হ্যান্ডলার (সংশোধিত)
-# ==========================================
 @dp.callback_query_handler(text="check_join", state="*")
 async def process_check_join(callback_query: types.CallbackQuery, state: FSMContext):
     try:
-        # সঠিক ইউজারের আইডি এবং ইউজারনেম নেওয়া হলো
         user_id = callback_query.from_user.id
-        username = f"@{callback_query.from_user.username}" if callback_query.from_user.username else "No_Username"
         
         # আবার চেক করা হচ্ছে ইউজার গ্রুপে জয়েন করেছে কি না
         is_member = await check_joined(user_id)
@@ -2205,40 +2147,15 @@ async def process_check_join(callback_query: types.CallbackQuery, state: FSMCont
         if is_member:
             # সুন্দর সাকসেস মেসেজ (অ্যালার্ট হিসেবে দেখাবে)
             await callback_query.answer(
-                "✨ অভিনন্দন! আপনি সফলভাবে আমাদের গ্রুপে যোগ দিয়েছেন।", 
+                "✨ অভিনন্দন! আপনি সফলভাবে আমাদের গ্রুপে যোগ দিয়েছেন। এখন আপনি বটটি ব্যবহার করতে পারবেন।", 
                 show_alert=True
             )
             
             # আগের "জয়েন করুন" মেসেজটি মুছে ফেলা হবে
             await callback_query.message.delete()
             
-            # --- ডাটাবেস রেজিস্ট্রেশন (যেহেতু start কমান্ডে এটি স্কিপ হয়েছিল) ---
-            cursor.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,))
-            existing_user = cursor.fetchone()
-
-            if not existing_user:
-                # নতুন ইউজার হিসেবে লোকাল ডাটাবেসে সেভ করা
-                sql = "INSERT INTO users (user_id, username, balance, referral_count, referred_by, refer_balance, withdraw_count) VALUES (?, ?, ?, ?, ?, ?, ?)"
-                cursor.execute(sql, (user_id, username, 0.0, 0, 0, 0.0, 0))
-                db.commit()
-            else:
-                cursor.execute("UPDATE users SET username = ? WHERE user_id = ?", (username, user_id))
-                db.commit()
-                
-            # --- ওয়েলকাম মেসেজ ও মেইন মেনু পাঠানো ---
-            inline_kb = types.InlineKeyboardMarkup(row_width=2)
-            help_button = types.InlineKeyboardButton(text="🆘 Contact Support", url="t.me/INSTAFB_SUPPORT") 
-            inline_kb.add(help_button)
-
-            welcome_text = """📢 আজকের কাজের আপডেট এবং রেট লিস্ট 📢
-
-💸 Instagram 2FA: ৩ ৳🎉
-💸 Instagram Cookies: ৪.০০ ৳🎉
-💸 Instagram Mother: ৭.০০ ৳🎉
-💸 Facebook 00 Fnd 2FA: ৫.৮০ ৳🎉
-"""
-            await callback_query.message.answer(welcome_text, reply_markup=inline_kb, parse_mode="Markdown")
-            await callback_query.message.answer("❓কী করতে চান বেছে নিন ◀️", reply_markup=main_menu())
+            # ইউজারকে মেইন মেনুতে নিয়ে যাওয়ার জন্য স্টার্ট ফাংশনটি কল করা
+            await start(callback_query.message, state)
             
         else:
             # জয়েন না করলে লাল চিহ্নে সুন্দর সতর্কবার্তা
@@ -2248,9 +2165,8 @@ async def process_check_join(callback_query: types.CallbackQuery, state: FSMCont
             )
             
     except Exception as e:
+        # কোনো যান্ত্রিক ত্রুটি হলে বট বন্ধ হবে না, শুধু আপনাকে ছোট করে জানাবে
         await callback_query.answer(f"❌ একটি ত্রুটি হয়েছে: {str(e)}", show_alert=False)
-        print(f"Error in check_join: {e}")
-        
 import io
 
 # --- অ্যাডমিন কমান্ড: প্রোফাইল লিঙ্ক ও সব পেমেন্ট মেথডসহ রিপোর্ট ---
