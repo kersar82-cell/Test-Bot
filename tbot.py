@@ -10,8 +10,8 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from supabase import create_client, Client
 
 # আপনার ডাটাবেস তথ্য
-SUPABASE_URL = "https://mxxxnwnberhhnpgfmzml.supabase.co"
-SUPABASE_KEY = "sb_publishable_NhIUA5uUQMKB7wBhxH2oxg_myQWFWJ0"
+SUPABASE_URL = "https://wvczkeugwcfhyizibafs.supabase.co"
+SUPABASE_KEY = "sb_publishable_GDshun93XOcy7LhxjA-nBQ_3riyH-RR"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 def save_id_supabase(user_id, u_id, u_pass, two_fa, category):
@@ -255,14 +255,59 @@ def generate_ig_username():
     ]
     
     return random.choice(formats)
-    
+CREATE TABLE profiles (
+  id TEXT PRIMARY KEY, 
+  username TEXT,      
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+import asyncio
+
+# --- ডাটাবেসে সেভ করার ফাংশন ---
+async def add_user_to_db(user_id, username):
+    loop = asyncio.get_event_loop()
+
+    def sync_db_op():
+        try:
+            # ইউজার অলরেডি আছে কিনা চেক করা (যাতে এরর না আসে)
+            check = supabase.table("profiles").select("id").eq("id", str(user_id)).execute()
+            
+            if not check.data:
+                data = {
+                    "id": str(user_id),
+                    "username": username if username else "No Username"
+                }
+                supabase.table("profiles").insert(data).execute()
+        except Exception as e:
+            logging.error(f"Error: {e}")
+
+    # এটি ব্যাকগ্রাউন্ডে কাজ করবে, তাই ৫০০ জন ক্লিক করলেও বট হ্যাং হবে না
+    await loop.run_in_executor(None, sync_db_op)           
 # /start কমান্ডে মেইন মেনু, রেফারেল ও ওয়েলকাম মেসেজ
 @dp.message_handler(commands=['start'], state="*")
 async def start(message: types.Message, state: FSMContext):
     await state.finish()
        
     user_id = message.from_user.id
-            # গ্রুপে জয়েন আছে কি না চেক
+        # ইউজার আইডি এবং ইউজারনেম সংগ্রহ
+    username = message.from_user.username
+
+    # ব্যাকগ্রাউন্ডে ডাটাবেসে সেভ করার ফাংশন কল (এটি বটকে স্লো করবে না)
+    loop = asyncio.get_event_loop()
+    def save_user():
+        try:
+            # আগে চেক করা ইউজার আছে কি না, না থাকলে ইনসার্ট করা
+            check = supabase.table("profiles").select("id").eq("id", str(user_id)).execute()
+            if not check.data:
+                supabase.table("profiles").insert({
+                    "id": str(user_id), 
+                    "username": username if username else "No Username"
+                }).execute()
+        except Exception as e:
+            logging.error(f"Error: {e}")
+
+    await loop.run_in_executor(None, save_user)
+                          
+    # গ্রুপে জয়েন আছে কি না চেক
     is_joined = await check_joined(user_id)
     if not is_joined:
         keyboard = types.InlineKeyboardMarkup()
