@@ -255,11 +255,7 @@ def generate_ig_username():
     ]
     
     return random.choice(formats)
-CREATE TABLE profiles (
-  id TEXT PRIMARY KEY, 
-  username TEXT,      
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+
 import asyncio
 
 # --- ডাটাবেসে সেভ করার ফাংশন ---
